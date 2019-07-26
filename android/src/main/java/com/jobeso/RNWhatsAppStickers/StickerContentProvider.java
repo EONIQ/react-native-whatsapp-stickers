@@ -251,12 +251,17 @@ public class StickerContentProvider extends ContentProvider {
     }
 
     private AssetFileDescriptor fetchFile(@NonNull Uri uri, @NonNull AssetManager am, @NonNull String fileName, @NonNull String identifier) {
-        try {
-            return am.openFd(identifier + "/" + fileName);
-        } catch (IOException e) {
-            Log.e(Objects.requireNonNull(getContext()).getPackageName(), "IOException when getting asset file, uri:" + uri, e);
-            return null;
+        final File cacheFile = getContext().getExternalCacheDir();
+        final File file = new File(cacheFile, fileName);
+        try (final InputStream open = am.open(identifier + "/" + fileName);
+        final FileOutputStream fileOutputStream = new FileOutputStream(file)) {
+            byte[] buffer = new byte[1024];
+            int read;
+            while ((read = in.read(buffer)) != -1) {
+                out.write(buffer, 0, read);
+            }
         }
+        return new AssetFileDescriptor(ParcelFileDescriptor.open(file, ParcelFileDescriptor.MODE_READ_ONLY), 0, AssetFileDescriptor.UNKNOWN_LENGTH);
     }
 
 
