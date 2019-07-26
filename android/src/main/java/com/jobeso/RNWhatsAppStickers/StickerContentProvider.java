@@ -18,6 +18,7 @@ import android.content.res.AssetManager;
 import android.database.Cursor;
 import android.database.MatrixCursor;
 import android.net.Uri;
+import android.os.ParcelFileDescriptor;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
 import android.text.TextUtils;
@@ -26,7 +27,6 @@ import android.util.Log;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.File;
-import java.io.FileOutputStream;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -253,17 +253,22 @@ public class StickerContentProvider extends ContentProvider {
     }
 
     private AssetFileDescriptor fetchFile(@NonNull Uri uri, @NonNull AssetManager am, @NonNull String fileName, @NonNull String identifier) {
-        final File cacheFile = getContext().getExternalCacheDir();
-        final File file = new File(cacheFile, fileName);
-        try (final InputStream open = am.open(identifier + "/" + fileName);
-        final FileOutputStream fileOutputStream = new FileOutputStream(file)) {
-            byte[] buffer = new byte[1024];
-            int read;
-            while ((read = open.read(buffer)) != -1) {
-                out.write(buffer, 0, read);
+        try {
+            File file;
+            if(fileName.endsWith(".png")){
+                file = new File(getContext().getFilesDir()+  "/" + "stickers_asset" + "/" + identifier + "/try/", fileName);
+            } else {
+                file = new File(getContext().getFilesDir()+  "/" + "stickers_asset" + "/" + identifier + "/", fileName);
             }
+            if (!file.exists()) {
+                Log.d("fetFile", "StickerPack dir not found");
+            }
+            Log.d("fetchFile", "StickerPack " + file.getPath());
+            return new AssetFileDescriptor(ParcelFileDescriptor.open(file, ParcelFileDescriptor.MODE_READ_ONLY), 0L, -1L);
+        } catch (IOException e) {
+            Log.e(Objects.requireNonNull(getContext()).getPackageName(), "IOException when getting asset file, uri:" + uri, e);
+            return null;
         }
-        return new AssetFileDescriptor(ParcelFileDescriptor.open(file, ParcelFileDescriptor.MODE_READ_ONLY), 0, AssetFileDescriptor.UNKNOWN_LENGTH);
     }
 
 
